@@ -1,0 +1,197 @@
+-- The total no of liquor stores and liquor vendors
+SELECT 
+  count(distinct(store_name)) total_stores,
+  count(distinct vendor_name) total_vendor
+FROM
+  bigquery-public-data.iowa_liquor_sales.sales;
+
+
+--Calculate the cost price for each bottle that was sold
+SELECT
+    state_bottle_cost,
+    bottles_sold,
+    (state_bottle_cost * bottles_sold) AS cost_of_prod,
+    state_bottle_retail,
+    sale_dollars
+FROM 
+    bigquery-public-data.iowa_liquor_sales.sales
+LIMIT 
+    100;
+
+--Calculate the average cost price  and average revenue 
+WITH rev_table as
+    (SELECT
+        vendor_name,
+        sum(state_bottle_cost * bottles_sold) AS sum_rev_byvendor,
+        AVG(sale_dollars) as avg_revenue_bystore,
+        EXTRACT(year from date) date_year
+    FROM
+        bigquery-public-data.iowa_liquor_sales.sales
+    GROUP BY 
+      1)
+SELECT 
+    date_year, 
+    vendor_name, 
+    sum_rev_byvendor 
+from 
+    rev_table
+GROUP BY
+    1,4
+ORDER BY
+    1 DESC
+LIMIT 
+    100;  
+
+-- County with the highest and least number of stores
+
+ SELECT 
+    county, 
+    count(distinct store_name) total_store
+ FROM 
+    bigquery-public-data.iowa_liquor_sales.sales
+ GROUP BY 
+    county 
+ ORDER BY 
+    total_store desc
+ limit 
+    10;
+
+--County with the highest and least number of vendor
+SELECT 
+    county, 
+    count(distinct vendor_name) total_vendor
+FROM 
+    bigquery-public-data.iowa_liquor_sales.sales
+GROUP BY 
+    county
+ORDER BY
+   total_vendor asc
+LIMIT
+    10;
+
+--Alcohol consumption across the state
+SELECT 
+    city, 
+    sum(volume_sold_liters) vol_sold
+FROM 
+    bigquery-public-data.iowa_liquor_sales.sales
+GROUP BY
+    city
+ORDER BY
+    vol_sold desc
+
+--Counties with the highest alcohol consumption in 2022
+SELECT
+    DISTINCT(county), 
+    MAX(extract(year from date)) year, 
+    COUNT(distinct city),
+    SUM(volume_sold_liters) vol_sold, 
+    AVG(volume_sold_liters) avg_vol
+FROM
+    bigquery-public-data.iowa_liquor_sales.sales
+GROUP BY
+    1
+ORDER BY
+    4 DESC
+
+
+-- Gross profit margin
+select 
+    year,
+    ROUND(yearly_rev) total_sales,
+    ((yearly_rev - yearly_cost)/ yearly_rev) AS gross_margin
+FROM       
+    (SELECT 
+          EXTRACT(year from date ) as year,
+          SUM(sale_dollars) yearly_rev,
+          SUM(state_bottle_cost * bottles_sold) yearly_cost
+    FROM
+            bigquery-public-data.iowa_liquor_sales.sales
+    GROUP BY 
+            1) sub   
+GROUP BY
+    1,2,3
+ORDER BY 
+    3 desc;
+
+
+-- Any Seasonal changes in the sales of alcohol
+SELECT 
+    
+    EXTRACT(year from date ) as yearly_sales,
+    SUM(sale_dollars)
+FROM
+    bigquery-public-data.iowa_liquor_sales.sales
+GROUP BY 
+   yearly_sales
+ORDER BY
+    yearly_sales;
+
+--Top 10 store with the highest sales
+
+SELECT 
+    distinct store_name
+    SUM(sale_dollars) yearly_rev
+FROM
+    bigquery-public-data.iowa_liquor_sales.sales
+GROUP BY
+    1
+order by 
+    2 desc
+LIMIT
+    10
+
+-- Top 10 vendors with highest sales
+SELECT 
+    vendor_name,
+    sum(state_bottle_cost * bottles_sold) yearly_rev_vendor
+FROM 
+    bigquery-public-data.iowa_liquor_sales.sales
+GROUP BY
+    1
+ORDER BY
+    2 DESC
+LIMIT
+    10
+-- List of liquor categories
+select distinct category_name
+from bigquery-public-data.iowa_liquor_sales.sales
+
+
+-Distribution of stores across the county
+select
+    count(distinct(store_name)),
+    county
+from
+    bigquery-public-data.iowa_liquor_sales.sales
+where
+    county is not NULL
+group by
+    county
+order by
+    1 desc
+limit 10
+
+--Week days with the highest vol of alcohol sold and rev generated
+select 
+    FORMAT_DATE('%A', date ) as days,
+    ROUND(sum(sale_dollars)) total_rev,
+    sum(volume_sold_liters) total_vol_ltr
+from bigquery-public-data.iowa_liquor_sales.sales
+group by 
+    1
+ORDER BY
+    1
+
+--Brands with highest volume of alcohol by sales
+select
+    vendor_name,
+    sum(volume_sold_liters)
+from
+    bigquery-public-data.iowa_liquor_sales.sales
+group by
+    vendor_name
+order by
+   2 desc
+limit
+    10
